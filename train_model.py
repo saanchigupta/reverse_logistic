@@ -7,7 +7,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import joblib
 
 # Step 1: Read data
-df = pd.read_csv("gdataset_100.csv")  # Make sure the path is correct
+df = pd.read_csv("gdataset_100.csv")  # Ensure the file exists in your working directory
 
 # Step 2: Encode categorical variable
 le = LabelEncoder()
@@ -56,7 +56,11 @@ param_grid = {
     'min_samples_split': [2, 5, 10]
 }
 grid_search = GridSearchCV(
-    model, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1
+    estimator=RandomForestRegressor(random_state=42),
+    param_grid=param_grid,
+    cv=5,
+    scoring='neg_mean_squared_error',
+    n_jobs=-1
 )
 grid_search.fit(X_train, y_train)
 print("Best parameters from grid search:", grid_search.best_params_)
@@ -67,25 +71,18 @@ y_pred_best = best_model.predict(X_test)
 print("R² Score on Test Set with Best Model:", r2_score(y_test, y_pred_best))
 print("Mean Squared Error on Test Set with Best Model:", mean_squared_error(y_test, y_pred_best))
 
-# Step 11: Predict new input with best model
-predicted_score_best = best_model.predict(new_input)[0]
-print(f"Predicted score for condition = '{new_condition}', days_used = {new_days_used} with Best Model: {round(predicted_score_best, 2)}")
-
-# Step 12: Save the model and label encoder
+# Step 11: Save the model and label encoder
 joblib.dump(best_model, 'random_forest_model.pkl')
 joblib.dump(le, 'label_encoder.pkl')
 
-# Step 13: Load the model and label encoder
+# Step 12: Predict using saved model
 loaded_model = joblib.load('random_forest_model.pkl')
 loaded_le = joblib.load('label_encoder.pkl')
+encoded = loaded_le.transform([new_condition])[0]
+new_input = pd.DataFrame([[encoded, new_days_used]], columns=["condition_encoded", "days_used"])
+predicted = loaded_model.predict(new_input)[0]
+print(f"Predicted score using saved model: {round(predicted, 2)}")
 
-# Step 14: Predict using loaded model and encoder
-loaded_condition_encoded = loaded_le.transform([new_condition])[0]
-loaded_new_input = pd.DataFrame([[loaded_condition_encoded, new_days_used]], columns=X.columns)
-loaded_predicted_score = loaded_model.predict(loaded_new_input)[0]
-print(f"Predicted score using loaded model and encoder for condition = '{new_condition}', days_used = {new_days_used}: {round(loaded_predicted_score, 2)}")
-
-# Step 15: Save the processed dataset (optional)
+# Step 13: Save processed dataset
 df.to_csv("processed_dataset.csv", index=False)
-# Step 16: Print completion message 
-print("Training and evaluation completed successfully. Model and label encoder saved.")
+print("✅ Model training complete. Artifacts saved.")
